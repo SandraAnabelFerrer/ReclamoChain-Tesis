@@ -1,7 +1,7 @@
 import { AdminPanel } from "@/components/admin-panel";
 import { MainLayout } from "@/components/main-layout";
 
-export default function HomePage() {
+export default function AdminPage() {
     return (
         <MainLayout>
             <div className="flex items-center">
