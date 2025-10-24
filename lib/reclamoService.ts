@@ -17,9 +17,9 @@ export class ReclamoService {
     private collection: Collection<ReclamoDB> | null = null;
 
     /**
-     * Inicializar la conexión a la base de datos
+     * Inicializar la conexión a la base de datos (ahora pública)
      */
-    private async init(): Promise<void> {
+    public async init(): Promise<void> {
         if (!this.db) {
             this.db = await connectToDatabase();
             this.collection = this.db.collection<ReclamoDB>("reclamos");
@@ -264,6 +264,80 @@ export class ReclamoService {
             ) {
                 estadisticas.montoTotalAprobado += monto;
             }
+        });
+
+        return estadisticas;
+    }
+
+    /**
+     * Obtener el total de reclamaciones
+     */
+    public async getTotalReclamaciones(): Promise<number> {
+        await this.init();
+        return await this.collection!.countDocuments();
+    }
+
+    /**
+     * Obtener el total de reclamaciones aprobadas
+     */
+    public async getReclamacionesAprobadas(): Promise<number> {
+        await this.init();
+        return await this.collection!.countDocuments({
+            estado: EstadoReclamoDB.APROBADO,
+        });
+    }
+
+    /**
+     * Obtener el total de usuarios únicos que han realizado reclamaciones
+     */
+    public async getUsuariosActivos(): Promise<number> {
+        await this.init();
+        const usuarios = await this.collection!.distinct("solicitante");
+        return usuarios.length;
+    }
+
+    /**
+     * Obtener el monto total de todas las reclamaciones
+     */
+    public async getMontoTotal(): Promise<number> {
+        await this.init();
+        const pipeline = [{ $group: { _id: null, total: { $sum: "$monto" } } }];
+        const result = await this.collection!.aggregate(pipeline).toArray();
+        return result[0]?.total || 0;
+    }
+
+    /**
+     * Obtener estadísticas por tipo de siniestro
+     */
+    public async getEstadisticasPorTipo(): Promise<
+        Record<string, { count: number; percentage: number }>
+    > {
+        await this.init();
+
+        const pipeline = [
+            {
+                $group: {
+                    _id: "$tipoSiniestro",
+                    count: { $sum: 1 },
+                },
+            },
+        ];
+
+        const resultados = await this.collection!.aggregate(pipeline).toArray();
+        const total = await this.getTotalReclamaciones();
+
+        const estadisticas: Record<
+            string,
+            { count: number; percentage: number }
+        > = {};
+
+        resultados.forEach((resultado) => {
+            const tipo = resultado._id as string;
+            const count = resultado.count;
+            const percentage =
+                total > 0 ? Math.round((count / total) * 100) : 0;
+
+            estadisticas[tipo] = { count, percentage };
         });
 
         return estadisticas;

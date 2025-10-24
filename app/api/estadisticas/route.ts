@@ -9,6 +9,8 @@ export async function GET(request: NextRequest) {
     try {
         // Obtener estadísticas de MongoDB
         const estadisticasDB = await reclamoService.obtenerEstadisticas();
+        const estadisticasPorTipo =
+            await reclamoService.getEstadisticasPorTipo();
 
         // Obtener estadísticas del blockchain
         let estadisticasBlockchain = null;
@@ -34,7 +36,10 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({
             success: true,
             data: {
-                database: estadisticasDB,
+                database: {
+                    ...estadisticasDB,
+                    porTipo: estadisticasPorTipo,
+                },
                 blockchain: estadisticasBlockchain,
             },
         });

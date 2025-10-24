@@ -21,6 +21,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useEthValue } from "@/hooks/use-eth-value";
 import { useToast } from "@/hooks/use-toast";
 import { formatEth, formatPesos, pesosToEth } from "@/lib/currency";
 import type { ReclamoDB } from "@/lib/reclamo";
@@ -74,6 +75,7 @@ export function ReclamosManager() {
     } | null>(null);
     const [notas, setNotas] = useState("");
     const { toast } = useToast();
+    const { ethValue } = useEthValue();
 
     const [formulario, setFormulario] = useState<FormularioReclamo>({
         descripcion: "",
@@ -597,7 +599,7 @@ export function ReclamosManager() {
                                                             {formatPesos(
                                                                 Number(
                                                                     reclamo.monto
-                                                                ) * 2500000
+                                                                ) * ethValue
                                                             )}
                                                         </p>
                                                     </div>

@@ -8,16 +8,29 @@ const ETH_TO_ARS_RATE = 2500000;
 
 /**
  * Obtener el tipo de cambio actual de ETH a ARS
- * En una implementación real, esto consultaría una API como CoinGecko o similar
+ * Consulta la API de CoinGecko para obtener el precio en tiempo real
  */
 export async function getEthToArsRate(): Promise<number> {
     try {
-        // En una implementación real, aquí harías una llamada a una API
-        // Por ejemplo: const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=ars');
-        // return response.data.ethereum.ars;
+        const response = await fetch(
+            "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=ars",
+            {
+                next: { revalidate: 60 }, // Cache por 60 segundos
+            }
+        );
 
-        // Por ahora retornamos un valor fijo, pero se puede actualizar
-        return ETH_TO_ARS_RATE;
+        if (!response.ok) {
+            throw new Error(`API response error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const rate = data?.ethereum?.ars;
+
+        if (!rate || typeof rate !== "number") {
+            throw new Error("Invalid rate data received from API");
+        }
+
+        return rate;
     } catch (error) {
         console.error("Error obteniendo tipo de cambio:", error);
         // Fallback al valor por defecto
