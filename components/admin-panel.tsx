@@ -16,12 +16,14 @@ import type { ReclamoDB } from "@/lib/reclamo";
 import {
     BarChart3,
     CheckCircle,
+    DollarSign,
     FileCheck,
     Loader2,
     RefreshCw,
     XCircle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { PaymentModal } from "./payment-modal";
 
 const estadoColors = {
     creado: "bg-blue-100 text-blue-800",
@@ -48,6 +50,9 @@ export function AdminPanel() {
         tipo: "aprobar" | "rechazar";
     } | null>(null);
     const [notas, setNotas] = useState("");
+    const [reclamoParaPago, setReclamoParaPago] = useState<ReclamoDB | null>(
+        null
+    );
     const { toast } = useToast();
 
     useEffect(() => {
@@ -455,15 +460,27 @@ export function AdminPanel() {
                                         </>
                                     )}
 
-                                    {[
-                                        "aprobado",
-                                        "rechazado",
-                                        "pagado",
-                                    ].includes(reclamo.estado) && (
+                                    {reclamo.estado === "aprobado" && (
+                                        <Button
+                                            onClick={() =>
+                                                setReclamoParaPago(reclamo)
+                                            }
+                                            size="sm"
+                                            className="gap-2 bg-green-600 hover:bg-green-700">
+                                            <DollarSign className="h-4 w-4" />
+                                            Procesar Pago
+                                        </Button>
+                                    )}
+
+                                    {["rechazado", "pagado"].includes(
+                                        reclamo.estado
+                                    ) && (
                                         <Badge
                                             variant="outline"
                                             className="text-xs">
-                                            Procesado
+                                            {reclamo.estado === "pagado"
+                                                ? "Pagado ✓"
+                                                : "Procesado"}
                                         </Badge>
                                     )}
                                 </div>
@@ -553,6 +570,18 @@ export function AdminPanel() {
                         </CardContent>
                     </Card>
                 </div>
+            )}
+
+            {/* Modal de pago */}
+            {reclamoParaPago && (
+                <PaymentModal
+                    reclamo={reclamoParaPago}
+                    onClose={() => setReclamoParaPago(null)}
+                    onSuccess={() => {
+                        setReclamoParaPago(null);
+                        cargarDatos();
+                    }}
+                />
             )}
         </div>
     );

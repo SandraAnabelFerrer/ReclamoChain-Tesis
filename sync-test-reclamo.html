@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sincronizar Reclamo 2217058678 a MongoDB</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .info {
+            background: #e8f4f8;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .data-preview {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+        button {
+            background: #0070f3;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #0051cc;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        #resultado {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .loading {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 Sincronizar Reclamo a MongoDB</h1>
+        <p>Este reclamo fue creado en la blockchain Sepolia y necesita ser agregado a MongoDB para aparecer en el panel de administración.</p>
+
+        <div class="info">
+            <strong>📊 Información del Reclamo:</strong><br>
+            <strong>ID:</strong> 2217058678<br>
+            <strong>Solicitante:</strong> 0x914582B7f5eDCC4eE3950db39519Cb29265b4CAD<br>
+            <strong>Descripción:</strong> Reclamo de prueba - Daños en vehículo<br>
+            <strong>Monto:</strong> 0.001 ETH<br>
+            <strong>Estado en Blockchain:</strong> Creado ✅<br>
+            <strong>Hash TX:</strong> <a href="https://sepolia.etherscan.io/tx/0x33450ba085ce96a52a535ae239b2374a02a673487283a37e894e1a41c18e80c4" target="_blank">Ver en Etherscan</a>
+        </div>
+
+        <h3>📋 Datos a enviar a MongoDB:</h3>
+        <div class="data-preview" id="dataPreview"></div>
+
+        <button onclick="sincronizarReclamo()" id="btnSync">
+            🚀 Sincronizar a MongoDB
+        </button>
+
+        <button onclick="verificarEnDB()" id="btnVerify">
+            🔍 Verificar si existe en DB
+        </button>
+
+        <div id="resultado"></div>
+    </div>
+
+    <script>
+        const reclamoData = {
+            siniestroId: 2217058678,
+            solicitante: "0x914582B7f5eDCC4eE3950db39519Cb29265b4CAD",
+            descripcion: "Reclamo de prueba - Daños en vehículo",
+            monto: 0.001,
+            tipoSiniestro: "Reclamo importado desde blockchain",
+            numeroPoliza: "POL-SYNC-2217058678",
+            documentos: [],
+            ubicacion: ""
+        };
+
+        // Mostrar datos
+        document.getElementById('dataPreview').textContent = JSON.stringify(reclamoData, null, 2);
+
+        async function sincronizarReclamo() {
+            const resultadoDiv = document.getElementById('resultado');
+            const btnSync = document.getElementById('btnSync');
+            
+            resultadoDiv.className = 'loading';
+            resultadoDiv.innerHTML = '⏳ Sincronizando reclamo a MongoDB...';
+            btnSync.disabled = true;
+
+            try {
+                const response = await fetch('http://localhost:3000/api/reclamos/sync', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(reclamoData)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    resultadoDiv.className = 'success';
+                    resultadoDiv.innerHTML = `
+                        ✅ <strong>¡Reclamo sincronizado exitosamente!</strong><br><br>
+                        <strong>Detalles:</strong><br>
+                        ${JSON.stringify(data.data, null, 2).replace(/\n/g, '<br>').replace(/ /g, '&nbsp;')}<br><br>
+                        <strong>Siguiente paso:</strong><br>
+                        1. Ve a <a href="http://localhost:3000/admin" target="_blank">http://localhost:3000/admin</a><br>
+                        2. Busca el reclamo ID: <strong>2217058678</strong><br>
+                        3. Valida el reclamo → Aprueba → Procesa el pago 💰
+                    `;
+                } else {
+                    resultadoDiv.className = 'error';
+                    resultadoDiv.innerHTML = `
+                        ❌ <strong>Error al sincronizar:</strong><br>
+                        ${data.error || data.message}<br><br>
+                        ${data.message === 'El reclamo ' + reclamoData.siniestroId + ' ya está registrado' 
+                            ? '✅ <strong>El reclamo ya existe en MongoDB!</strong> Puedes usarlo directamente en /admin'
+                            : 'Verifica que el servidor esté corriendo en http://localhost:3000'}
+                    `;
+                }
+            } catch (error) {
+                resultadoDiv.className = 'error';
+                resultadoDiv.innerHTML = `
+                    ❌ <strong>Error de conexión:</strong><br>
+                    ${error.message}<br><br>
+                    <strong>Posibles causas:</strong><br>
+                    1. El servidor Next.js no está corriendo<br>
+                    2. El servidor no está en http://localhost:3000<br>
+                    3. Hay un problema de CORS<br><br>
+                    <strong>Solución:</strong><br>
+                    Ejecuta <code>npm run dev</code> en la terminal y vuelve a intentar.
+                `;
+            } finally {
+                btnSync.disabled = false;
+            }
+        }
+
+        async function verificarEnDB() {
+            const resultadoDiv = document.getElementById('resultado');
+            const btnVerify = document.getElementById('btnVerify');
+            
+            resultadoDiv.className = 'loading';
+            resultadoDiv.innerHTML = '⏳ Verificando si el reclamo existe en MongoDB...';
+            btnVerify.disabled = true;
+
+            try {
+                const response = await fetch('http://localhost:3000/api/reclamos');
+                const data = await response.json();
+
+                const existe = data.data.find(r => r.siniestroId === reclamoData.siniestroId);
+
+                if (existe) {
+                    resultadoDiv.className = 'success';
+                    resultadoDiv.innerHTML = `
+                        ✅ <strong>¡Reclamo encontrado en MongoDB!</strong><br><br>
+                        <strong>Detalles:</strong><br>
+                        ID: ${existe.siniestroId}<br>
+                        Descripción: ${existe.descripcion}<br>
+                        Monto: ${existe.monto} ETH<br>
+                        Estado: ${existe.estado}<br><br>
+                        <strong>Puedes proceder a:</strong><br>
+                        <a href="http://localhost:3000/admin" target="_blank">Ir al Panel de Administración</a>
+                    `;
+                } else {
+                    resultadoDiv.className = 'error';
+                    resultadoDiv.innerHTML = `
+                        ❌ <strong>Reclamo NO encontrado en MongoDB</strong><br><br>
+                        El reclamo con ID ${reclamoData.siniestroId} no existe en la base de datos.<br>
+                        Haz clic en "Sincronizar a MongoDB" para agregarlo.
+                    `;
+                }
+            } catch (error) {
+                resultadoDiv.className = 'error';
+                resultadoDiv.innerHTML = `
+                    ❌ <strong>Error al verificar:</strong> ${error.message}<br><br>
+                    Asegúrate de que el servidor esté corriendo.
+                `;
+            } finally {
+                btnVerify.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

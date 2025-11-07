@@ -5,6 +5,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import {
     BarChart3,
+    DollarSign,
     FileText,
     Home,
     Menu,
@@ -25,6 +26,11 @@ const navigation = [
         name: "Reclamaciones",
         href: "/reclamos",
         icon: FileText,
+    },
+    {
+        name: "Pagos",
+        href: "/pagos",
+        icon: DollarSign,
     },
     {
         name: "Estadísticas",

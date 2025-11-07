@@ -344,6 +344,57 @@ export class ReclamoService {
     }
 
     /**
+     * Actualizar estado de un reclamo (simplificado para pagos y cambios de estado)
+     */
+    async actualizarEstado(
+        siniestroId: number,
+        nuevoEstado: EstadoReclamoDB,
+        realizadoPor: string,
+        hashTransaccion?: string,
+        comentarios?: string
+    ): Promise<ReclamoDB | null> {
+        await this.init();
+
+        const reclamoActual = await this.obtenerReclamoPorId(siniestroId);
+        if (!reclamoActual) {
+            throw new Error(`Reclamo con ID ${siniestroId} no encontrado`);
+        }
+
+        const ahora = new Date();
+        const cambioEstado: CambioEstado = {
+            fecha: ahora,
+            estadoAnterior: reclamoActual.estado,
+            estadoNuevo: nuevoEstado,
+            realizadoPor,
+            hashTransaccion,
+            comentarios,
+        };
+
+        const actualizacion: any = {
+            estado: nuevoEstado,
+            fechaActualizacion: ahora,
+        };
+
+        // Agregar hash de transacción de pago si corresponde
+        if (nuevoEstado === EstadoReclamoDB.PAGADO && hashTransaccion) {
+            actualizacion.hashTransaccionPago = hashTransaccion;
+        }
+
+        const resultado = await this.collection!.findOneAndUpdate(
+            { siniestroId },
+            {
+                $set: actualizacion,
+                $push: {
+                    historialCambios: cambioEstado,
+                },
+            },
+            { returnDocument: "after" }
+        );
+
+        return resultado;
+    }
+
+    /**
      * Eliminar una reclamación (solo para desarrollo/testing)
      */
     async eliminarReclamo(siniestroId: number): Promise<boolean> {

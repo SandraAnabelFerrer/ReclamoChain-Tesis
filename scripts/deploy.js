@@ -15,7 +15,7 @@ async function main() {
     console.log("📝 Desplegando con la cuenta:", deployer.address);
 
     // Verificar balance
-    const balance = await deployer.getBalance();
+    const balance = await ethers.provider.getBalance(deployer.address);
     console.log(
         "💰 Balance de la cuenta:",
         ethers.formatEther(balance),
@@ -32,12 +32,14 @@ async function main() {
     // Desplegar el contrato
     const contrato = await ReclamacionesSeguros.deploy();
 
-    // Esperar confirmación
-    await contrato.deployed();
+    // Esperar confirmación (ethers v6)
+    await contrato.waitForDeployment();
+    const contractAddress = await contrato.getAddress();
+    const deployTx = contrato.deploymentTransaction();
 
     console.log("✅ Contrato desplegado exitosamente!");
-    console.log("📍 Dirección del contrato:", contrato.address);
-    console.log("🔗 Hash de transacción:", contrato.deployTransaction.hash);
+    console.log("📍 Dirección del contrato:", contractAddress);
+    console.log("🔗 Hash de transacción:", deployTx?.hash || "N/A");
 
     // Verificar que el contrato se desplegó correctamente
     const propietario = await contrato.propietario();
@@ -45,11 +47,10 @@ async function main() {
 
     // Guardar información del despliegue
     const deploymentInfo = {
-        contractAddress: contrato.address,
+        contractAddress: contractAddress,
         deployerAddress: deployer.address,
-        transactionHash: contrato.deployTransaction.hash,
-        blockNumber: contrato.deployTransaction.blockNumber,
-        network: hre.network.name, // Updated line
+        transactionHash: deployTx?.hash || "N/A",
+        network: hre.network.name,
         timestamp: new Date().toISOString(),
     };
 
@@ -58,11 +59,15 @@ async function main() {
 
     console.log("\n🔧 Para verificar el contrato en Etherscan:");
     console.log(
-        `npx hardhat verify --network ${hre.network.name} ${contrato.address}`
-    ); // Updated line
+        `npx hardhat verify --network ${hre.network.name} ${contractAddress}`
+    );
 
     console.log("\n📝 Agrega esta dirección a tu archivo .env.local:");
-    console.log(`NEXT_PUBLIC_CONTRACT_ADDRESS=${contrato.address}`);
+    console.log(`NEXT_PUBLIC_CONTRACT_ADDRESS=${contractAddress}`);
+
+    console.log(
+        "\n⚠️  IMPORTANTE: Actualiza el CONTRACT_ADDRESS en .env.local con la nueva dirección!"
+    );
 }
 
 // Ejecutar el script

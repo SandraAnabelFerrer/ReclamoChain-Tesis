@@ -206,7 +206,7 @@ contract ReclamacionesSeguros {
         );
     }
 
-    // Procesar pago
+    // Procesar pago (solo administradores - desde fondos del contrato)
     function procesarPago(
         uint256 _siniestroId
     ) external payable soloAdministrador reclamoExiste(_siniestroId) {
@@ -222,6 +222,37 @@ contract ReclamacionesSeguros {
 
         payable(reclamo.solicitante).transfer(reclamo.monto);
 
+        if (msg.value > reclamo.monto) {
+            payable(msg.sender).transfer(msg.value - reclamo.monto);
+        }
+
+        emit ReclamoPagado(
+            _siniestroId,
+            reclamo.solicitante,
+            reclamo.monto,
+            block.timestamp
+        );
+    }
+
+    // Pagar reclamo propio (cualquier persona puede pagar)
+    function pagarReclamoPublico(
+        uint256 _siniestroId
+    ) external payable reclamoExiste(_siniestroId) {
+        Reclamo storage reclamo = reclamos[_siniestroId];
+        require(
+            reclamo.estado == EstadoReclamo.Aprobado,
+            "El reclamo debe estar aprobado para ser pagado"
+        );
+        require(msg.value >= reclamo.monto, "El monto enviado es insuficiente");
+
+        reclamo.estado = EstadoReclamo.Pagado;
+        reclamo.procesadoPor = msg.sender;
+        reclamo.fechaActualizacion = block.timestamp;
+
+        // Transferir el monto al solicitante
+        payable(reclamo.solicitante).transfer(reclamo.monto);
+
+        // Devolver el excedente si lo hay
         if (msg.value > reclamo.monto) {
             payable(msg.sender).transfer(msg.value - reclamo.monto);
         }
