@@ -45,6 +45,12 @@ interface FormularioReclamo {
     tipoSiniestro: string;
     ubicacion: string;
     numeroPoliza: string;
+    usuarioSeleccionado?: {
+        _id: string;
+        nombre: string;
+        email: string;
+        direccionWallet?: string;
+    };
 }
 
 const estadoColors = {
@@ -84,12 +90,61 @@ export function ReclamosManager() {
         tipoSiniestro: "",
         ubicacion: "",
         numeroPoliza: "",
+        usuarioSeleccionado: undefined,
     });
+    const [usuarios, setUsuarios] = useState<any[]>([]);
+    const [buscandoUsuarios, setBuscandoUsuarios] = useState(false);
+    const [busquedaUsuario, setBusquedaUsuario] = useState("");
 
     // Cargar reclamos al montar el componente
     useEffect(() => {
         cargarReclamos();
+        cargarUsuarios();
     }, []);
+
+    // Cargar usuarios para el buscador
+    const cargarUsuarios = async () => {
+        try {
+            const response = await fetch("/api/usuarios");
+            const data = await response.json();
+            if (data.success) {
+                setUsuarios(data.data);
+            }
+        } catch (error) {
+            console.error("Error cargando usuarios:", error);
+        }
+    };
+
+    // Filtrar usuarios según búsqueda
+    const usuariosFiltrados = usuarios.filter((usuario) => {
+        if (!busquedaUsuario) return false;
+        const busqueda = busquedaUsuario.toLowerCase();
+        return (
+            usuario.nombre.toLowerCase().includes(busqueda) ||
+            usuario.email.toLowerCase().includes(busqueda) ||
+            (usuario.direccionWallet &&
+                usuario.direccionWallet.toLowerCase().includes(busqueda))
+        );
+    });
+
+    // Seleccionar usuario
+    const seleccionarUsuario = (usuario: any) => {
+        setFormulario({
+            ...formulario,
+            usuarioSeleccionado: usuario,
+            numeroPoliza: formulario.numeroPoliza || `POL-${usuario.email.split("@")[0].toUpperCase()}-${new Date().getFullYear()}`,
+        });
+        setBusquedaUsuario("");
+        setBuscandoUsuarios(false);
+        
+        if (!usuario.direccionWallet) {
+            toast({
+                title: "Advertencia",
+                description: "Este usuario no tiene una dirección de wallet asociada. El reclamo se creará pero el usuario no podrá verlo hasta asociar una wallet.",
+                variant: "destructive",
+            });
+        }
+    };
 
     // Función para convertir pesos a ETH automáticamente
     const handlePesosChange = async (pesos: string) => {
@@ -176,10 +231,25 @@ export function ReclamosManager() {
                     monto: Number.parseFloat(formulario.montoEth),
                     tipoSiniestro: formulario.tipoSiniestro,
                     ubicacion: formulario.ubicacion,
+                    solicitante: formulario.usuarioSeleccionado?.direccionWallet,
+                    emailUsuario: formulario.usuarioSeleccionado?.email, // Enviar email del usuario
                 }),
             });
 
-            const data = await response.json();
+            let data;
+            try {
+                data = await response.json();
+            } catch (jsonError) {
+                console.error("Error parseando JSON:", jsonError);
+                const text = await response.text();
+                console.error("Respuesta del servidor (texto):", text);
+                toast({
+                    title: "Error del servidor",
+                    description: `Error ${response.status}: ${response.statusText}. Revisa la consola para más detalles.`,
+                    variant: "destructive",
+                });
+                return;
+            }
 
             if (data.success) {
                 toast({
@@ -195,7 +265,9 @@ export function ReclamosManager() {
                     tipoSiniestro: "",
                     ubicacion: "",
                     numeroPoliza: "",
+                    usuarioSeleccionado: undefined,
                 });
+                setBusquedaUsuario("");
 
                 setMostrarFormulario(false);
                 cargarReclamos(); // Recargar lista
@@ -376,6 +448,85 @@ export function ReclamosManager() {
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={crearReclamo} className="space-y-4">
+                            {/* Buscador de Usuario */}
+                            <div className="relative">
+                                <Label htmlFor="buscarUsuario">
+                                    Buscar Usuario (Opcional)
+                                </Label>
+                                <div className="relative">
+                                    <Input
+                                        id="buscarUsuario"
+                                        value={busquedaUsuario}
+                                        onChange={(e) => {
+                                            setBusquedaUsuario(e.target.value);
+                                            setBuscandoUsuarios(e.target.value.length > 0);
+                                        }}
+                                        onFocus={() => {
+                                            if (busquedaUsuario) {
+                                                setBuscandoUsuarios(true);
+                                            }
+                                        }}
+                                        placeholder="Buscar por nombre, email o dirección wallet..."
+                                    />
+                                    {buscandoUsuarios && usuariosFiltrados.length > 0 && (
+                                        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                                            {usuariosFiltrados.map((usuario) => (
+                                                <button
+                                                    key={usuario._id}
+                                                    type="button"
+                                                    onClick={() => seleccionarUsuario(usuario)}
+                                                    className="w-full text-left px-4 py-2 hover:bg-gray-100 border-b last:border-b-0"
+                                                >
+                                                    <div className="font-medium">{usuario.nombre}</div>
+                                                    <div className="text-sm text-gray-600">{usuario.email}</div>
+                                                    {usuario.direccionWallet && (
+                                                        <div className="text-xs text-gray-500 font-mono">
+                                                            {usuario.direccionWallet.substring(0, 10)}...
+                                                        </div>
+                                                    )}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                {formulario.usuarioSeleccionado && (
+                                    <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-sm font-medium text-blue-900">
+                                                    {formulario.usuarioSeleccionado.nombre}
+                                                </p>
+                                                <p className="text-xs text-blue-700">
+                                                    {formulario.usuarioSeleccionado.email}
+                                                </p>
+                                                {formulario.usuarioSeleccionado.direccionWallet && (
+                                                    <p className="text-xs text-blue-600 font-mono mt-1">
+                                                        {formulario.usuarioSeleccionado.direccionWallet}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => {
+                                                    setFormulario({
+                                                        ...formulario,
+                                                        usuarioSeleccionado: undefined,
+                                                    });
+                                                    setBusquedaUsuario("");
+                                                }}
+                                            >
+                                                ✕
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Selecciona un usuario para asignar el reclamo. Si no seleccionas, se usará la dirección que firme la transacción.
+                                </p>
+                            </div>
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <Label htmlFor="numeroPoliza">
@@ -394,8 +545,9 @@ export function ReclamosManager() {
                                         required
                                     />
                                     <p className="text-xs text-gray-500 mt-1">
-                                        El ID del siniestro se generará
-                                        automáticamente
+                                        {formulario.usuarioSeleccionado 
+                                            ? "Se generó automáticamente basado en el usuario seleccionado"
+                                            : "El ID del siniestro se generará automáticamente"}
                                     </p>
                                 </div>
 

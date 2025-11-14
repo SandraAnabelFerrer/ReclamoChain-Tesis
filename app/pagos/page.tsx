@@ -1,5 +1,7 @@
 "use client";
 
+import { MainLayout } from "@/components/main-layout";
+import { AuthGuard } from "@/components/auth-guard";
 import { Badge } from "@/components/ui/badge";
 import {
     Card,
@@ -110,7 +112,9 @@ export default function PagosPage() {
     }
 
     return (
-        <div className="container mx-auto py-8 space-y-6">
+        <AuthGuard requiredRole="admin">
+            <MainLayout>
+                <div className="space-y-6">
             <div>
                 <h1 className="text-3xl font-bold mb-2">Historial de Pagos</h1>
                 <p className="text-gray-600">
@@ -417,6 +421,8 @@ export default function PagosPage() {
                     </CardContent>
                 </Card>
             )}
-        </div>
+                </div>
+            </MainLayout>
+        </AuthGuard>
     );
 }

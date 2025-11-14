@@ -19,6 +19,7 @@ export interface ReclamoDB {
   _id?: ObjectId
   siniestroId: number // ID único del siniestro (coincide con blockchain)
   solicitante: string // Dirección Ethereum del solicitante
+  emailUsuario?: string // Email del usuario asignado (para filtrar sin depender de wallet)
   descripcion: string // Descripción del siniestro
   monto: string // Monto en ETH (como string para precisión)
   montoWei: string // Monto en wei (como string)
@@ -66,6 +67,7 @@ export interface CambioEstado {
 export interface CrearReclamoDTO {
   siniestroId: number
   solicitante: string
+  emailUsuario?: string // Email del usuario asignado
   descripcion: string
   monto: string
   montoWei: string
@@ -96,6 +98,8 @@ export interface ActualizarReclamoDTO {
 export interface FiltrosReclamo {
   estado?: EstadoReclamoDB
   solicitante?: string
+  emailUsuario?: string // Filtrar por email del usuario
+  numeroPoliza?: string // Filtrar por número de póliza
   tipoSiniestro?: string
   fechaDesde?: Date
   fechaHasta?: Date

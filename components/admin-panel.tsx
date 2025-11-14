@@ -12,6 +12,11 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import {
+    aprobarReclamoConMetamask,
+    rechazarReclamoConMetamask,
+    validarReclamoConMetamask,
+} from "@/lib/contractClient";
 import type { ReclamoDB } from "@/lib/reclamo";
 import {
     BarChart3,
@@ -23,6 +28,7 @@ import {
     XCircle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { AdminManagement } from "./admin-management";
 import { PaymentModal } from "./payment-modal";
 
 const estadoColors = {
@@ -94,33 +100,46 @@ export function AdminPanel() {
         try {
             setProcesando(siniestroId);
 
-            const response = await fetch(
-                `/api/reclamos/${siniestroId}/validar`,
-                {
-                    method: "POST",
-                }
-            );
+            toast({
+                title: "Procesando",
+                description: "Confirma la transacción en MetaMask...",
+            });
 
-            const data = await response.json();
+            // Llamar directamente al contrato con MetaMask
+            const result = await validarReclamoConMetamask(siniestroId);
 
-            if (data.success) {
+            if (result.success) {
                 toast({
-                    title: "Reclamo validado",
-                    description: `Reclamo ${siniestroId} validado exitosamente`,
+                    title: "¡Reclamo validado!",
+                    description: `Transacción: ${result.txHash?.substring(
+                        0,
+                        10
+                    )}...`,
                 });
+
+                // Actualizar MongoDB con verificación de admin
+                await fetch(`/api/reclamos/${siniestroId}/validar`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        txHash: result.txHash,
+                        adminAddress: result.adminAddress,
+                    }),
+                });
+
                 cargarDatos();
             } else {
                 toast({
                     title: "Error",
-                    description: data.message || "Error validando el reclamo",
+                    description: result.error || "Error validando el reclamo",
                     variant: "destructive",
                 });
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error validando reclamo:", error);
             toast({
                 title: "Error",
-                description: "Error de conexión",
+                description: error.message || "Error de conexión",
                 variant: "destructive",
             });
         } finally {
@@ -144,31 +163,43 @@ export function AdminPanel() {
         try {
             setProcesando(siniestroId);
 
-            const endpoint = accion === "aprobar" ? "aprobar" : "rechazar";
-            const body = accion === "aprobar" ? { notas } : { razon: notas };
+            toast({
+                title: "Procesando",
+                description: "Confirma la transacción en MetaMask...",
+            });
 
-            const response = await fetch(
-                `/api/reclamos/${siniestroId}/${endpoint}`,
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify(body),
-                }
-            );
+            // Llamar directamente al contrato con MetaMask
+            const result =
+                accion === "aprobar"
+                    ? await aprobarReclamoConMetamask(siniestroId, notas)
+                    : await rechazarReclamoConMetamask(siniestroId, notas);
 
-            const data = await response.json();
-
-            if (data.success) {
+            if (result.success) {
                 toast({
-                    title: `Reclamo ${
+                    title: `¡Reclamo ${
                         accion === "aprobar" ? "aprobado" : "rechazado"
-                    }`,
-                    description: `Reclamo ${siniestroId} ${
-                        accion === "aprobar" ? "aprobado" : "rechazado"
-                    } exitosamente`,
+                    }!`,
+                    description: `Transacción: ${result.txHash?.substring(
+                        0,
+                        10
+                    )}...`,
                 });
+
+                // Actualizar MongoDB con verificación de admin
+                const endpoint = accion === "aprobar" ? "aprobar" : "rechazar";
+                const body =
+                    accion === "aprobar" ? { notas } : { razon: notas };
+
+                await fetch(`/api/reclamos/${siniestroId}/${endpoint}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        ...body,
+                        txHash: result.txHash,
+                        adminAddress: result.adminAddress,
+                    }),
+                });
+
                 setNotasModal(null);
                 setNotas("");
                 cargarDatos();
@@ -176,18 +207,18 @@ export function AdminPanel() {
                 toast({
                     title: "Error",
                     description:
-                        data.message ||
+                        result.error ||
                         `Error ${
                             accion === "aprobar" ? "aprobando" : "rechazando"
                         } el reclamo`,
                     variant: "destructive",
                 });
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error(`Error ${accion} reclamo:`, error);
             toast({
                 title: "Error",
-                description: "Error de conexión",
+                description: error.message || "Error de conexión",
                 variant: "destructive",
             });
         } finally {
@@ -235,6 +266,9 @@ export function AdminPanel() {
                     Actualizar
                 </Button>
             </div>
+
+            {/* Gestión de Administradores */}
+            <AdminManagement />
 
             {/* Estadísticas */}
             {estadisticas && (

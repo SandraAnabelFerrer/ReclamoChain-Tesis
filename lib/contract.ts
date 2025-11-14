@@ -16,6 +16,7 @@ const CONTRACT_ABI = [
     "function aprobarReclamo(uint256 _siniestroId, string memory _notas) external",
     "function rechazarReclamo(uint256 _siniestroId, string memory _razon) external",
     "function procesarPago(uint256 _siniestroId) external payable",
+    "function pagarReclamoPublico(uint256 _siniestroId) external payable",
     "function agregarAdministrador(address _admin) external",
     "function removerAdministrador(address _admin) external",
     "function retirarFondos() external",
@@ -148,4 +149,27 @@ export async function esAdministrador(direccion: string): Promise<boolean> {
 export async function obtenerPropietario(): Promise<string> {
     const contrato = getContractRead();
     return await contrato.propietario();
+}
+
+/**
+ * Obtener instancia del contrato conectado a MetaMask del usuario
+ * USO: Para que el USUARIO firme transacciones con SU wallet
+ */
+export async function getContractWithSigner(): Promise<ethers.Contract> {
+    if (typeof window === "undefined" || !window.ethereum) {
+        throw new Error("MetaMask no está disponible");
+    }
+
+    const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
+    if (!contractAddress) {
+        throw new Error(
+            "No se encontró NEXT_PUBLIC_CONTRACT_ADDRESS en .env.local"
+        );
+    }
+
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    await provider.send("eth_requestAccounts", []);
+    const signer = await provider.getSigner();
+
+    return new ethers.Contract(contractAddress, CONTRACT_ABI, signer);
 }

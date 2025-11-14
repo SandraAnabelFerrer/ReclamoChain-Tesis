@@ -72,12 +72,20 @@ export class ReclamoService {
         const ahora = new Date();
         const nuevoReclamo: ReclamoDB = {
             ...datos,
+            // Normalizar dirección del solicitante a minúsculas
+            solicitante: datos.solicitante.toLowerCase(),
+            // Guardar email del usuario si se proporciona (normalizado a minúsculas)
+            emailUsuario: datos.emailUsuario?.toLowerCase(),
             estado: EstadoReclamoDB.CREADO,
             fechaCreacion: ahora,
             fechaActualizacion: ahora,
             hashTransaccionCreacion: hashTransaccion,
             historialCambios: [],
         };
+
+        console.log("💾 Guardando reclamo:");
+        console.log("   - Solicitante (wallet):", nuevoReclamo.solicitante);
+        console.log("   - Email usuario:", nuevoReclamo.emailUsuario || "No asignado");
 
         const resultado = await this.collection!.insertOne(nuevoReclamo);
 
@@ -176,7 +184,19 @@ export class ReclamoService {
         }
 
         if (filtros.solicitante) {
-            query.solicitante = filtros.solicitante;
+            // Normalizar dirección a minúsculas para búsqueda exacta
+            query.solicitante = filtros.solicitante.toLowerCase();
+            console.log("🔍 Query MongoDB - solicitante:", query.solicitante);
+        }
+
+        if (filtros.emailUsuario) {
+            query.emailUsuario = filtros.emailUsuario.toLowerCase();
+            console.log("🔍 Query MongoDB - emailUsuario:", query.emailUsuario);
+        }
+
+        if (filtros.numeroPoliza) {
+            query.numeroPoliza = filtros.numeroPoliza;
+            console.log("🔍 Query MongoDB - numeroPoliza:", query.numeroPoliza);
         }
 
         if (filtros.tipoSiniestro) {

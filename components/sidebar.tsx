@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils";
 import {
     BarChart3,
     DollarSign,
-    FileText,
     Home,
     Menu,
     Settings,
@@ -16,16 +15,27 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const navigation = [
+// Sidebar SOLO para admin - UserLayout tiene su propia navegación
+const adminNavigation = [
     {
         name: "Dashboard",
         href: "/",
         icon: Home,
     },
     {
+        name: "Admin Panel",
+        href: "/admin",
+        icon: Settings,
+    },
+    {
         name: "Reclamaciones",
         href: "/reclamos",
-        icon: FileText,
+        icon: Wallet,
+    },
+    {
+        name: "Usuarios",
+        href: "/usuarios",
+        icon: Users,
     },
     {
         name: "Pagos",
@@ -36,16 +46,6 @@ const navigation = [
         name: "Estadísticas",
         href: "/estadisticas",
         icon: BarChart3,
-    },
-    {
-        name: "Usuarios",
-        href: "/usuarios",
-        icon: Users,
-    },
-    {
-        name: "Configuración",
-        href: "/configuracion",
-        icon: Settings,
     },
 ];
 
@@ -64,7 +64,7 @@ export function Sidebar({ className }: SidebarProps) {
                         Sistema de Reclamaciones
                     </h2>
                     <div className="space-y-1">
-                        {navigation.map((item) => (
+                        {adminNavigation.map((item) => (
                             <Button
                                 key={item.name}
                                 variant={
@@ -110,7 +110,7 @@ export function MobileSidebar() {
                 </div>
                 <div className="flex-1">
                     <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
-                        {navigation.map((item) => (
+                        {adminNavigation.map((item) => (
                             <Link
                                 key={item.name}
                                 href={item.href}

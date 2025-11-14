@@ -19,6 +19,7 @@ export interface ReclamoDB {
     _id?: string;
     siniestroId: number;
     solicitante: string;
+    emailUsuario?: string; // Email del usuario asignado (para filtrar sin depender de wallet)
     descripcion: string;
     monto: number;
     estado: EstadoReclamoDB;
@@ -41,6 +42,7 @@ export interface ReclamoDB {
 export interface CrearReclamoDTO {
     siniestroId: number;
     solicitante: string;
+    emailUsuario?: string; // Email del usuario asignado
     descripcion: string;
     monto: number;
     tipoSiniestro: string;
@@ -66,6 +68,8 @@ export interface ActualizarReclamoDTO {
 export interface FiltrosReclamo {
     estado?: EstadoReclamoDB;
     solicitante?: string;
+    emailUsuario?: string; // Filtrar por email del usuario
+    numeroPoliza?: string; // Filtrar por número de póliza
     tipoSiniestro?: string;
     fechaDesde?: Date;
     fechaHasta?: Date;

@@ -1,10 +1,11 @@
-import { getContractWrite } from "@/lib/contract";
+import { esAdministrador, getContractRead } from "@/lib/contract";
 import { reclamoService } from "@/lib/reclamoService";
 import { EstadoReclamoDB } from "@/models/reclamo";
 import { type NextRequest, NextResponse } from "next/server";
 
 /**
- * POST /api/reclamos/[id]/aprobar - Aprobar un reclamo
+ * POST /api/reclamos/[id]/aprobar - Actualizar MongoDB después de aprobar en blockchain
+ * La transacción blockchain YA se ejecutó desde el frontend con MetaMask
  */
 export async function POST(
     request: NextRequest,
@@ -13,7 +14,7 @@ export async function POST(
     try {
         const siniestroId = Number.parseInt(params.id);
         const body = await request.json();
-        const { notas = "" } = body;
+        const { notas = "", txHash, adminAddress } = body;
 
         if (isNaN(siniestroId)) {
             return NextResponse.json(
@@ -23,6 +24,32 @@ export async function POST(
                     message: "El ID del siniestro debe ser un número",
                 },
                 { status: 400 }
+            );
+        }
+
+        // Verificar que se proporcionó el hash de transacción y dirección del admin
+        if (!txHash || !adminAddress) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: "Datos incompletos",
+                    message: "Se requiere txHash y adminAddress",
+                },
+                { status: 400 }
+            );
+        }
+
+        // Verificar que la dirección es un administrador del contrato
+        const esAdmin = await esAdministrador(adminAddress);
+        if (!esAdmin) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: "No autorizado",
+                    message:
+                        "La dirección proporcionada no es administrador del contrato",
+                },
+                { status: 403 }
             );
         }
 
@@ -39,35 +66,33 @@ export async function POST(
             );
         }
 
-        // Verificar que el reclamo está validado
-        if (reclamo.estado !== EstadoReclamoDB.VALIDADO) {
+        // Verificar el estado en el contrato (fuente de verdad)
+        const contrato = getContractRead();
+        const reclamoBlockchain = await contrato.obtenerReclamo(siniestroId);
+        const estadoBlockchain = Number(reclamoBlockchain.estado);
+
+        // Estado 2 = aprobado
+        if (estadoBlockchain !== 2) {
             return NextResponse.json(
                 {
                     success: false,
-                    error: "Estado inválido",
-                    message: "El reclamo debe estar validado para ser aprobado",
+                    error: "Estado inconsistente",
+                    message: `El reclamo no está aprobado en blockchain (estado: ${estadoBlockchain})`,
                 },
                 { status: 400 }
             );
         }
-
-        // Interactuar con el contrato inteligente
-        const contrato = getContractWrite();
-        const transaccion = await contrato.aprobarReclamo(siniestroId, notas);
-
-        // Esperar confirmación
-        const recibo = await transaccion.wait();
 
         // Actualizar en MongoDB
         const reclamoActualizado = await reclamoService.actualizarReclamo(
             siniestroId,
             {
                 estado: EstadoReclamoDB.APROBADO,
-                hashTransaccionAprobacion: recibo.hash,
+                hashTransaccionAprobacion: txHash,
                 comentarios: notas,
-                evaluador: recibo.from,
+                evaluador: adminAddress.toLowerCase(),
             },
-            recibo.from
+            adminAddress
         );
 
         return NextResponse.json({

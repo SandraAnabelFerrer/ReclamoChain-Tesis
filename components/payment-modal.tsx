@@ -242,8 +242,18 @@ export function PaymentModal({
                 signer
             );
 
-            // Convertir monto a wei PRIMERO
-            const montoWei = ethers.parseEther(reclamo.monto.toString());
+            // Convertir monto a wei
+            // Asegurar que el monto tenga máximo 18 decimales (límite de ETH)
+            let montoLimpio = Number(reclamo.monto);
+
+            // Si el monto tiene más de 18 decimales, redondearlo
+            const montoStr = montoLimpio.toFixed(18);
+            const montoFinal = parseFloat(montoStr).toString();
+
+            console.log("💰 Monto original:", reclamo.monto);
+            console.log("💰 Monto limpio:", montoFinal);
+
+            const montoWei = ethers.parseEther(montoFinal);
             console.log("💎 Monto en Wei:", montoWei.toString());
 
             // Verificar red actual
