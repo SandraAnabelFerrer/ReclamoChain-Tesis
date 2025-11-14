@@ -41,6 +41,62 @@ export function PaymentModal({
     const [cuentaActual, setCuentaActual] = useState<string>("");
     const { toast } = useToast();
 
+    // Función para cambiar a la red Sepolia automáticamente
+    const cambiarARedSepolia = async () => {
+        const SEPOLIA_CHAIN_ID = "0xaa36a7"; // 11155111 en hexadecimal
+        const SEPOLIA_NETWORK = {
+            chainId: SEPOLIA_CHAIN_ID,
+            chainName: "Sepolia",
+            nativeCurrency: {
+                name: "Ether",
+                symbol: "ETH",
+                decimals: 18,
+            },
+            rpcUrls: [
+                "https://rpc.sepolia.org",
+                "https://ethereum-sepolia.publicnode.com",
+            ],
+            blockExplorerUrls: ["https://sepolia.etherscan.io"],
+        };
+
+        try {
+            // Intentar cambiar a Sepolia
+            await window.ethereum.request({
+                method: "wallet_switchEthereumChain",
+                params: [{ chainId: SEPOLIA_CHAIN_ID }],
+            });
+            console.log("✅ Cambiado a Sepolia exitosamente");
+            return true;
+        } catch (switchError: any) {
+            // Si la red no está agregada (error 4902), agregarla
+            if (switchError.code === 4902) {
+                try {
+                    await window.ethereum.request({
+                        method: "wallet_addEthereumChain",
+                        params: [SEPOLIA_NETWORK],
+                    });
+                    console.log(
+                        "✅ Red Sepolia agregada y cambiada exitosamente"
+                    );
+                    return true;
+                } catch (addError) {
+                    console.error("❌ Error agregando red Sepolia:", addError);
+                    throw new Error(
+                        "No se pudo agregar la red Sepolia. Por favor agrégalo manualmente en MetaMask."
+                    );
+                }
+            } else if (switchError.code === 4001) {
+                // Usuario rechazó el cambio de red
+                throw new Error(
+                    "Debes estar en la red Sepolia para continuar. Por favor cambia manualmente en MetaMask."
+                );
+            } else {
+                console.error("❌ Error cambiando a Sepolia:", switchError);
+                throw switchError;
+            }
+        }
+    };
+
     const conectarWallet = async () => {
         try {
             if (typeof window.ethereum === "undefined") {
@@ -53,25 +109,59 @@ export function PaymentModal({
                 return;
             }
 
+            // Cambiar a Sepolia automáticamente antes de conectar
+            try {
+                await cambiarARedSepolia();
+            } catch (networkError: any) {
+                toast({
+                    title: "Red incorrecta",
+                    description:
+                        networkError.message ||
+                        "Por favor cambia a Sepolia en MetaMask",
+                    variant: "destructive",
+                });
+                return;
+            }
+
             const provider = new ethers.BrowserProvider(window.ethereum);
             const accounts = await provider.send("eth_requestAccounts", []);
 
             if (accounts.length > 0) {
                 setCuentaActual(accounts[0]);
                 setWalletConectada(true);
+
+                // Verificar que estamos en Sepolia
+                const network = await provider.getNetwork();
+                const chainId = Number(network.chainId);
+
                 toast({
                     title: "Wallet conectada",
                     description: `Conectado a ${accounts[0].substring(
                         0,
                         6
-                    )}...${accounts[0].substring(38)}`,
+                    )}...${accounts[0].substring(38)} en ${network.name}`,
                 });
+
+                console.log(
+                    "✅ Wallet conectada en red:",
+                    network.name,
+                    "Chain ID:",
+                    chainId
+                );
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error conectando wallet:", error);
+
+            let errorMessage = "No se pudo conectar con MetaMask";
+            if (error.code === 4001) {
+                errorMessage = "Conexión rechazada por el usuario";
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+
             toast({
                 title: "Error",
-                description: "No se pudo conectar con MetaMask",
+                description: errorMessage,
                 variant: "destructive",
             });
         }
@@ -91,7 +181,22 @@ export function PaymentModal({
             setLoading(true);
 
             console.log("🔍 Iniciando proceso de pago con MetaMask...");
-            
+
+            // Asegurar que estamos en Sepolia antes de continuar
+            try {
+                await cambiarARedSepolia();
+            } catch (networkError: any) {
+                toast({
+                    title: "Red incorrecta",
+                    description:
+                        networkError.message ||
+                        "Por favor cambia a Sepolia en MetaMask",
+                    variant: "destructive",
+                });
+                setLoading(false);
+                return;
+            }
+
             const provider = new ethers.BrowserProvider(window.ethereum);
             const signer = await provider.getSigner();
             const signerAddress = await signer.getAddress();
@@ -101,17 +206,20 @@ export function PaymentModal({
             // Obtener dirección del contrato
             const contractAddress = process.env
                 .NEXT_PUBLIC_CONTRACT_ADDRESS as string;
-            
+
             console.log("🔍 DEBUG - Variables de entorno:");
-            console.log("   - NEXT_PUBLIC_CONTRACT_ADDRESS:", process.env.NEXT_PUBLIC_CONTRACT_ADDRESS);
+            console.log(
+                "   - NEXT_PUBLIC_CONTRACT_ADDRESS:",
+                process.env.NEXT_PUBLIC_CONTRACT_ADDRESS
+            );
             console.log("   - contractAddress asignado:", contractAddress);
-            
+
             if (!contractAddress) {
                 throw new Error(
                     "❌ Dirección del contrato no configurada.\n\n" +
-                    "Agrega NEXT_PUBLIC_CONTRACT_ADDRESS en .env.local:\n" +
-                    "NEXT_PUBLIC_CONTRACT_ADDRESS=0xdD89f538b34B9Bf62d4413Ee8FFa6F94C893497A\n\n" +
-                    "Luego reinicia el servidor Next.js (npm run dev)"
+                        "Agrega NEXT_PUBLIC_CONTRACT_ADDRESS en .env.local:\n" +
+                        "NEXT_PUBLIC_CONTRACT_ADDRESS=0xdD89f538b34B9Bf62d4413Ee8FFa6F94C893497A\n\n" +
+                        "Luego reinicia el servidor Next.js (npm run dev)"
                 );
             }
 
@@ -138,32 +246,90 @@ export function PaymentModal({
             const montoWei = ethers.parseEther(reclamo.monto.toString());
             console.log("💎 Monto en Wei:", montoWei.toString());
 
-            // Verificar balance de la wallet
-            const balance = await provider.getBalance(signerAddress);
-            console.log("💰 Balance de tu wallet:", ethers.formatEther(balance), "ETH");
+            // Verificar red actual
+            const network = await provider.getNetwork();
+            const chainId = Number(network.chainId);
+            const SEPOLIA_CHAIN_ID = 11155111; // Chain ID de Sepolia
 
-            if (balance < montoWei) {
-                throw new Error(
+            console.log("🌐 Red actual:", network.name, "Chain ID:", chainId);
+
+            // Verificar que estemos en Sepolia
+            if (chainId !== SEPOLIA_CHAIN_ID) {
+                const errorMsg =
+                    `❌ Red incorrecta detectada.\n\n` +
+                    `Estás conectado a: ${network.name} (Chain ID: ${chainId})\n` +
+                    `Necesitas estar en: Sepolia (Chain ID: ${SEPOLIA_CHAIN_ID})\n\n` +
+                    `Por favor:\n` +
+                    `1. Abre MetaMask\n` +
+                    `2. Cambia a la red Sepolia Test Network\n` +
+                    `3. Vuelve a intentar el pago`;
+
+                console.error("❌", errorMsg);
+                throw new Error(errorMsg);
+            }
+
+            // Verificar balance de la wallet
+            console.log("🔍 Obteniendo balance para:", signerAddress);
+            const balance = await provider.getBalance(signerAddress);
+            const balanceFormatted = ethers.formatEther(balance);
+            console.log("💰 Balance de tu wallet:", balanceFormatted, "ETH");
+            console.log("💰 Balance en Wei:", balance.toString());
+            console.log("💎 Monto requerido en Wei:", montoWei.toString());
+
+            // Comparar balance (incluyendo un pequeño margen para gas)
+            const gasEstimate = ethers.parseEther("0.0001"); // Estimación de gas
+            const totalNecesario = montoWei + gasEstimate;
+
+            if (balance < totalNecesario) {
+                const errorMsg =
                     `❌ Fondos insuficientes en tu wallet.\n\n` +
-                    `Necesitas: ${ethers.formatEther(montoWei)} ETH\n` +
-                    `Tienes: ${ethers.formatEther(balance)} ETH`
+                    `Necesitas: ${ethers.formatEther(totalNecesario)} ETH\n` +
+                    `  - Monto del pago: ${ethers.formatEther(
+                        montoWei
+                    )} ETH\n` +
+                    `  - Gas estimado: ~${ethers.formatEther(
+                        gasEstimate
+                    )} ETH\n\n` +
+                    `Tienes: ${balanceFormatted} ETH\n\n` +
+                    `Red: ${network.name} (Chain ID: ${chainId})\n` +
+                    `Dirección: ${signerAddress}\n\n` +
+                    `💡 Si tienes fondos en otra red, asegúrate de estar en Sepolia Test Network.`;
+
+                console.error("❌", errorMsg);
+                console.error("🔍 Debug - Comparación:");
+                console.error("   Balance (Wei):", balance.toString());
+                console.error(
+                    "   Total necesario (Wei):",
+                    totalNecesario.toString()
                 );
+                console.error(
+                    "   Diferencia:",
+                    (totalNecesario - balance).toString(),
+                    "Wei"
+                );
+
+                throw new Error(errorMsg);
             }
 
             // ⚠️ VALIDACIÓN DESACTIVADA TEMPORALMENTE
             // El error "missing trie node" indica que el RPC no está sincronizado
             // Dejamos que el smart contract haga las validaciones
-            console.log("⚠️  Saltando validación de lectura (RPC no sincronizado)");
-            console.log("   El smart contract validará el estado al ejecutar la transacción");
+            console.log(
+                "⚠️  Saltando validación de lectura (RPC no sincronizado)"
+            );
+            console.log(
+                "   El smart contract validará el estado al ejecutar la transacción"
+            );
 
             toast({
                 title: "Esperando confirmación",
-                description:
-                    "Por favor confirma la transacción en MetaMask...",
+                description: "Por favor confirma la transacción en MetaMask...",
             });
 
             console.log("🚀 Enviando transacción a MetaMask...");
-            console.log("   - Función: pagarReclamoPublico (cualquier usuario puede pagar)");
+            console.log(
+                "   - Función: pagarReclamoPublico (cualquier usuario puede pagar)"
+            );
             console.log("   - Parámetros:", reclamo.siniestroId);
             console.log("   - Value (ETH):", ethers.formatEther(montoWei));
             console.log("   - Gas Limit: 300000 (manual, sin estimación)");
@@ -184,30 +350,35 @@ export function PaymentModal({
                 console.error("❌ Código de error:", txError.code);
                 console.error("❌ Mensaje:", txError.message);
                 console.error("❌ Data:", txError.data);
-                
-                if (txError.code === 'ACTION_REJECTED') {
-                    throw new Error("❌ Transacción rechazada por el usuario en MetaMask");
-                }
-                
-                // Si es error de RPC, dar instrucciones
-                if (txError.code === -32603 || txError.message?.includes('missing trie node')) {
+
+                if (txError.code === "ACTION_REJECTED") {
                     throw new Error(
-                        "❌ Error de conexión RPC.\n\n" +
-                        "El nodo RPC no está sincronizado. Por favor:\n" +
-                        "1. Abre MetaMask\n" +
-                        "2. Ve a Configuración > Redes\n" +
-                        "3. Edita la red Sepolia\n" +
-                        "4. Cambia el RPC URL a:\n" +
-                        "   https://rpc.sepolia.org\n" +
-                        "   o\n" +
-                        "   https://ethereum-sepolia.publicnode.com\n" +
-                        "5. Guarda y vuelve a intentar"
+                        "❌ Transacción rechazada por el usuario en MetaMask"
                     );
                 }
-                
+
+                // Si es error de RPC, dar instrucciones
+                if (
+                    txError.code === -32603 ||
+                    txError.message?.includes("missing trie node")
+                ) {
+                    throw new Error(
+                        "❌ Error de conexión RPC.\n\n" +
+                            "El nodo RPC no está sincronizado. Por favor:\n" +
+                            "1. Abre MetaMask\n" +
+                            "2. Ve a Configuración > Redes\n" +
+                            "3. Edita la red Sepolia\n" +
+                            "4. Cambia el RPC URL a:\n" +
+                            "   https://rpc.sepolia.org\n" +
+                            "   o\n" +
+                            "   https://ethereum-sepolia.publicnode.com\n" +
+                            "5. Guarda y vuelve a intentar"
+                    );
+                }
+
                 throw new Error(
                     `❌ Error al enviar transacción:\n${txError.message}\n\n` +
-                    `Código: ${txError.code || 'N/A'}`
+                        `Código: ${txError.code || "N/A"}`
                 );
             }
 
@@ -251,33 +422,41 @@ export function PaymentModal({
             }
         } catch (error: any) {
             console.error("❌ ERROR COMPLETO:", error);
-            console.error("❌ Error code:", error.code);
-            console.error("❌ Error reason:", error.reason);
-            console.error("❌ Error data:", error.data);
 
-            let errorMessage = "Error procesando el pago";
-            
-            if (error.code === "ACTION_REJECTED") {
-                errorMessage = "Transacción cancelada por el usuario";
-            } else if (error.message?.includes("NO EXISTE")) {
-                errorMessage = error.message;
-            } else if (error.message?.includes("APROBADO")) {
-                errorMessage = error.message;
-            } else if (error.message?.includes("PAGADO")) {
-                errorMessage = error.message;
-            } else if (error.message?.includes("PERMISOS")) {
-                errorMessage = error.message;
-            } else if (error.message?.includes("Fondos insuficientes")) {
-                errorMessage = error.message;
-            } else if (error.reason) {
-                errorMessage = `Error del contrato: ${error.reason}`;
-            } else if (error.message) {
-                errorMessage = error.message;
+            // Manejo seguro de propiedades del error
+            const errorCode = error?.code;
+            const errorReason = error?.reason;
+            const errorData = error?.data;
+            const errorMessage = error?.message || String(error);
+
+            console.error("❌ Error code:", errorCode);
+            console.error("❌ Error reason:", errorReason);
+            console.error("❌ Error data:", errorData);
+            console.error("❌ Error message:", errorMessage);
+
+            let userFriendlyMessage = "Error procesando el pago";
+
+            if (errorCode === "ACTION_REJECTED") {
+                userFriendlyMessage = "Transacción cancelada por el usuario";
+            } else if (errorMessage?.includes("NO EXISTE")) {
+                userFriendlyMessage = errorMessage;
+            } else if (errorMessage?.includes("APROBADO")) {
+                userFriendlyMessage = errorMessage;
+            } else if (errorMessage?.includes("PAGADO")) {
+                userFriendlyMessage = errorMessage;
+            } else if (errorMessage?.includes("PERMISOS")) {
+                userFriendlyMessage = errorMessage;
+            } else if (errorMessage?.includes("Fondos insuficientes")) {
+                userFriendlyMessage = errorMessage;
+            } else if (errorReason) {
+                userFriendlyMessage = `Error del contrato: ${errorReason}`;
+            } else if (errorMessage) {
+                userFriendlyMessage = errorMessage;
             }
 
             toast({
                 title: "Error en el pago",
-                description: errorMessage,
+                description: userFriendlyMessage,
                 variant: "destructive",
             });
         } finally {
@@ -354,8 +533,7 @@ export function PaymentModal({
                         variant="ghost"
                         size="icon"
                         onClick={onClose}
-                        disabled={loading}
-                    >
+                        disabled={loading}>
                         <X className="h-4 w-4" />
                     </Button>
                 </CardHeader>
@@ -399,9 +577,10 @@ export function PaymentModal({
 
                             {/* Opción MetaMask */}
                             <button
-                                onClick={() => setMetodoSeleccionado("metamask")}
-                                className="w-full p-6 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all text-left"
-                            >
+                                onClick={() =>
+                                    setMetodoSeleccionado("metamask")
+                                }
+                                className="w-full p-6 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all text-left">
                                 <div className="flex items-start gap-4">
                                     <div className="p-3 bg-orange-100 rounded-lg">
                                         <Wallet className="h-6 w-6 text-orange-600" />
@@ -425,9 +604,10 @@ export function PaymentModal({
 
                             {/* Opción Contrato */}
                             <button
-                                onClick={() => setMetodoSeleccionado("contrato")}
-                                className="w-full p-6 border-2 border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition-all text-left"
-                            >
+                                onClick={() =>
+                                    setMetodoSeleccionado("contrato")
+                                }
+                                className="w-full p-6 border-2 border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition-all text-left">
                                 <div className="flex items-start gap-4">
                                     <div className="p-3 bg-green-100 rounded-lg">
                                         <CheckCircle2 className="h-6 w-6 text-green-600" />
@@ -473,8 +653,7 @@ export function PaymentModal({
                                             <Button
                                                 onClick={conectarWallet}
                                                 className="w-full"
-                                                size="lg"
-                                            >
+                                                size="lg">
                                                 <Wallet className="mr-2 h-5 w-5" />
                                                 Conectar MetaMask
                                             </Button>
@@ -497,8 +676,7 @@ export function PaymentModal({
                                                 onClick={pagarConMetamask}
                                                 disabled={loading}
                                                 className="w-full"
-                                                size="lg"
-                                            >
+                                                size="lg">
                                                 {loading ? (
                                                     <>
                                                         <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -540,8 +718,7 @@ export function PaymentModal({
                                         onClick={pagarDesdeContrato}
                                         disabled={loading}
                                         className="w-full"
-                                        size="lg"
-                                    >
+                                        size="lg">
                                         {loading ? (
                                             <>
                                                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -562,8 +739,7 @@ export function PaymentModal({
                                 onClick={() => setMetodoSeleccionado(null)}
                                 variant="outline"
                                 className="w-full"
-                                disabled={loading}
-                            >
+                                disabled={loading}>
                                 Cambiar método de pago
                             </Button>
                         </div>

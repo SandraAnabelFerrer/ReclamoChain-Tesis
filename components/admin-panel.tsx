@@ -350,7 +350,7 @@ export function AdminPanel() {
                                                 reclamo.estado as keyof typeof estadoColors
                                             ]
                                         }>
-                                        {reclamo.estado.toUpperCase()}
+                                        {reclamo?.estado}
                                     </Badge>
                                 </div>
 
