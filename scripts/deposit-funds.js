@@ -3,102 +3,123 @@
  * Útil para financiar pagos automáticos desde el contrato
  */
 
-const hre = require("hardhat");
 const { ethers } = require("hardhat");
+require("dotenv").config({ path: ".env.local" });
 
 async function main() {
-    console.log("🚀 Depositando fondos en el contrato de reclamaciones...\n");
+    console.log("💰 Depositando fondos en el contrato...\n");
 
-    // Obtener dirección del contrato
-    const contractAddress = process.env.CONTRACT_ADDRESS;
+    const contractAddress =
+        process.env.CONTRACT_ADDRESS ||
+        process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
     if (!contractAddress) {
-        throw new Error(
-            "❌ Por favor define CONTRACT_ADDRESS en el archivo .env"
-        );
+        throw new Error("❌ Define CONTRACT_ADDRESS en .env.local");
     }
 
-    // Obtener la wallet del deployer
-    const [deployer] = await ethers.getSigners();
-    console.log("📝 Cuenta que deposita:", deployer.address);
+    // Monto a depositar (en ETH) - Puedes cambiar este valor
+    const montoEth = process.env.DEPOSIT_AMOUNT || "0.001";
 
-    // Obtener balance actual de la wallet
-    const deployerBalance = await ethers.provider.getBalance(deployer.address);
+    console.log("📍 Contrato:", contractAddress);
+    console.log("💵 Monto a depositar:", montoEth, "ETH");
+    console.log("");
+
+    const [depositor] = await ethers.getSigners();
+    console.log("🔑 Cuenta que deposita:", depositor.address);
+
+    // Consultar balance actual de la cuenta
+    const balanceCuenta = await ethers.provider.getBalance(depositor.address);
     console.log(
-        "💰 Balance de la wallet:",
-        ethers.formatEther(deployerBalance),
+        "💰 Balance de tu cuenta:",
+        ethers.formatEther(balanceCuenta),
         "ETH\n"
     );
 
-    // Definir cantidad a depositar (0.1 ETH por defecto)
-    const depositAmount = process.env.DEPOSIT_AMOUNT || "0.1";
-    const amountInWei = ethers.parseEther(depositAmount);
+    // Verificar que tiene fondos suficientes
+    const montoWei = ethers.parseEther(montoEth);
+    if (balanceCuenta < montoWei) {
+        throw new Error(
+            "❌ No tienes suficientes fondos para depositar este monto"
+        );
+    }
 
-    console.log(`📤 Depositando ${depositAmount} ETH al contrato...`);
-    console.log(`📍 Dirección del contrato: ${contractAddress}\n`);
+    // Obtener contrato para consultar balance
+    const ReclamacionesSeguros = await ethers.getContractFactory(
+        "ReclamacionesSeguros"
+    );
+    const contrato = ReclamacionesSeguros.attach(contractAddress);
 
     try {
-        // Enviar transacción
-        const tx = await deployer.sendTransaction({
+        // Consultar balance actual del contrato
+        const balanceAntes = await contrato.obtenerBalance();
+        console.log(
+            "📊 Balance actual del contrato:",
+            ethers.formatEther(balanceAntes),
+            "ETH"
+        );
+
+        // Depositar fondos
+        console.log(`\n📤 Enviando ${montoEth} ETH al contrato...`);
+        const tx = await depositor.sendTransaction({
             to: contractAddress,
-            value: amountInWei,
+            value: montoWei,
         });
 
-        console.log("⏳ Transacción enviada. Hash:", tx.hash);
+        console.log("⏳ Hash:", tx.hash);
         console.log("⏳ Esperando confirmación...\n");
 
-        // Esperar confirmación
         const receipt = await tx.wait();
 
         console.log("✅ ¡Fondos depositados exitosamente!");
         console.log("📊 Detalles de la transacción:");
-        console.log(`   - Block: ${receipt.blockNumber}`);
-        console.log(`   - Gas usado: ${receipt.gasUsed.toString()}`);
-        console.log(
-            `   - Gas precio: ${ethers.formatUnits(
-                receipt.gasPrice || 0n,
-                "gwei"
-            )} gwei\n`
-        );
+        console.log("   Block:", receipt.blockNumber);
+        console.log("   Gas usado:", receipt.gasUsed.toString());
+        console.log("   Hash:", receipt.hash);
 
-        // Obtener nuevo balance del contrato
-        const contractBalance = await ethers.provider.getBalance(
-            contractAddress
-        );
+        // Consultar nuevo balance del contrato
+        const balanceDespues = await contrato.obtenerBalance();
         console.log(
-            "💎 Nuevo balance del contrato:",
-            ethers.formatEther(contractBalance),
+            "\n💰 Nuevo balance del contrato:",
+            ethers.formatEther(balanceDespues),
             "ETH"
         );
 
-        // Mostrar balance actualizado de la wallet
-        const newDeployerBalance = await ethers.provider.getBalance(
-            deployer.address
+        console.log("\n📌 RESUMEN:");
+        console.log("   Depositado:", ethers.formatEther(montoWei), "ETH");
+        console.log(
+            "   Balance anterior:",
+            ethers.formatEther(balanceAntes),
+            "ETH"
         );
         console.log(
-            "💰 Nuevo balance de la wallet:",
-            ethers.formatEther(newDeployerBalance),
-            "ETH\n"
+            "   Balance actual:",
+            ethers.formatEther(balanceDespues),
+            "ETH"
         );
 
-        // Calcular red
+        // Verificar en Etherscan
         const network = await ethers.provider.getNetwork();
-        const networkName =
+        const explorerUrl =
             network.chainId === 11155111n
-                ? "sepolia"
-                : network.chainId === 5n
-                ? "goerli"
-                : "unknown";
-
-        console.log(
-            `🔗 Ver en Etherscan: https://${networkName}.etherscan.io/tx/${tx.hash}`
-        );
+                ? "https://sepolia.etherscan.io"
+                : "https://etherscan.io";
+        console.log("\n🔍 Ver en explorer:");
+        console.log(`   ${explorerUrl}/tx/${receipt.hash}`);
+        console.log(`   ${explorerUrl}/address/${contractAddress}`);
     } catch (error) {
-        console.error("❌ Error depositando fondos:", error);
+        console.error("\n❌ Error:", error.message);
+
+        if (error.message.includes("insufficient funds")) {
+            console.log("\n💡 No tienes suficiente ETH en tu cuenta.");
+            console.log("   Asegúrate de tener fondos en la red Sepolia.");
+            console.log(
+                "   Puedes obtener ETH de prueba en: https://sepoliafaucet.com/"
+            );
+        }
+
         throw error;
     }
 }
 
-// Ejecutar script
 main()
     .then(() => process.exit(0))
     .catch((error) => {

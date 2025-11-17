@@ -54,7 +54,12 @@ export async function POST(
 
                 // Verificar balance del contrato
                 const balance = await provider.getBalance(contrato.target);
-                const montoWei = ethers.parseEther(reclamo.monto.toString());
+                
+                // Limitar a 18 decimales (máximo para ETH) y convertir a wei
+                const montoStr = typeof reclamo.monto === 'number' 
+                    ? reclamo.monto.toFixed(18) 
+                    : parseFloat(reclamo.monto).toFixed(18);
+                const montoWei = ethers.parseEther(montoStr);
 
                 if (balance < montoWei) {
                     return NextResponse.json(
@@ -62,14 +67,14 @@ export async function POST(
                             success: false,
                             message: `Balance insuficiente en el contrato. Balance: ${ethers.formatEther(
                                 balance
-                            )} ETH, Requerido: ${reclamo.monto} ETH`,
+                            )} ETH, Requerido: ${montoStr} ETH`,
                         },
                         { status: 400 }
                     );
                 }
 
                 console.log(
-                    `Procesando pago de ${reclamo.monto} ETH para reclamo ${siniestroId}...`
+                    `Procesando pago de ${montoStr} ETH para reclamo ${siniestroId}...`
                 );
 
                 // Ejecutar transacción en blockchain
