@@ -1,271 +1,240 @@
-# 🏥 Sistema de Reclamaciones de Seguros en Blockchain
+# 🏥 Sistema de Reclamaciones de Seguros en Blockchain  
+### Tesina – Universidad Champagnat  
+**Autora: Sandra Anabel Ferrer**
 
-Sistema descentralizado para la gestión automatizada de reclamaciones de seguros utilizando tecnología blockchain (Ethereum) y MongoDB.
+Sistema descentralizado para la gestión automatizada de reclamaciones de seguros utilizando **Blockchain (Ethereum Sepolia)**, **Next.js**, **Node.js**, y **MongoDB**.  
+El objetivo es modernizar el proceso de reclamos mediante contratos inteligentes, asegurando transparencia, trazabilidad y automatización del flujo completo.
+
+---
 
 ## 🌟 Características Principales
 
--   ✅ **Gestión de Reclamaciones**: Crear, validar, aprobar/rechazar reclamos
--   💰 **Sistema de Pagos**: Procesamiento de pagos con MetaMask o desde el contrato
--   📊 **Estadísticas en Tiempo Real**: Dashboard con métricas del sistema
--   🔐 **Blockchain**: Registro inmutable en Ethereum (Sepolia Testnet)
--   💾 **MongoDB**: Base de datos para datos adicionales y búsquedas rápidas
--   🎨 **UI Moderna**: Interfaz responsive con Next.js 14 y Tailwind CSS
+-   ✅ **Gestión completa de Reclamos:** Crear, validar, aprobar, rechazar y pagar reclamos.
+-   💰 **Sistema de Pagos Web3:** Pagos con MetaMask o directamente desde el contrato.
+-   📊 **Dashboard en Tiempo Real:** Estadísticas del sistema desde APIs propias.
+-   🔐 **Blockchain:** Registro inmutable en Ethereum (Sepolia Testnet).
+-   💾 **MongoDB + Mongoose:** Base de datos para búsquedas rápidas e historial.
+-   🎨 **Interfaz Moderna:** Construida con Next.js 14, React, Tailwind CSS y shadcn/ui.
+
+---
 
 ## 🚀 Inicio Rápido
 
-### Prerequisitos
+### 📌 Prerequisitos
 
 ```bash
-Node.js >= 18.x
+Node.js >= 18
 npm o yarn
 MongoDB (local o Atlas)
-MetaMask (extensión de navegador)
+MetaMask (extensión del navegador)
 ```
 
-### Instalación
+---
 
-1. **Clonar el repositorio**
+## 🔧 Instalación
+
+### 1. **Clonar el repositorio**
 
 ```bash
-git clone <repository-url>
-cd mabel-tesis
+git clone https://github.com/SandraAnabelFerrer/ReclamoChain-Tesis.git
+cd ReclamoChain-Tesis
 ```
 
-2. **Instalar dependencias**
+### 2. **Instalar dependencias**
 
 ```bash
 npm install
 ```
 
-3. **Configurar variables de entorno**
+### 3. **Configurar variables de entorno**
 
-Crear archivo `.env.local`:
+Crear archivo **`.env.local`** en la raíz del proyecto:
 
 ```env
 # Blockchain
 NEXT_PUBLIC_CONTRACT_ADDRESS=0x...
 NEXT_PUBLIC_NETWORK=sepolia
-SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/YOUR_INFURA_KEY
-PRIVATE_KEY=0x... # Tu private key para transacciones
+SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/TU_INFURA_KEY
+PRIVATE_KEY=0x...  # Tu private key para transacciones
 
 # MongoDB
-MONGODB_URI=mongodb+srv://user:password@cluster.mongodb.net/seguros
+MONGODB_URI=mongodb+srv://usuario:password@cluster.mongodb.net/seguros
 ```
 
-4. **Compilar y desplegar contratos** (opcional, si vas a desplegar)
+---
+
+## 📦 Contratos Inteligentes
+
+### Compilar contrato
 
 ```bash
 npx hardhat compile
+```
+
+### Desplegar contrato en Sepolia (opcional)
+
+```bash
 npx hardhat run scripts/deploy.js --network sepolia
 ```
 
-5. **Ejecutar el proyecto**
+---
+
+## ▶️ Ejecutar el Proyecto
 
 ```bash
 npm run dev
 ```
 
-Abrir [http://localhost:3000](http://localhost:3000)
-
-## 💰 Sistema de Pagos
-
-El sistema incluye **dos métodos de pago**:
-
-### 1. Pago con MetaMask (Descentralizado)
-
--   El administrador paga desde su wallet personal
--   Mayor control y transparencia
--   Ideal para tesis y demostración de Web3
-
-### 2. Pago desde Contrato (Automatizado)
-
--   Fondos pre-depositados en el contrato
--   Procesamiento automático
--   Mayor eficiencia
-
-📖 **[Ver Documentación Completa del Sistema de Pagos →](./SISTEMA_PAGOS.md)**
-
-### Comandos Útiles para Pagos
-
-```bash
-# Verificar balance del contrato
-npx hardhat run scripts/check-balance.js --network sepolia
-
-# Depositar fondos al contrato (0.1 ETH por defecto)
-npx hardhat run scripts/deposit-funds.js --network sepolia
-
-# Depositar cantidad personalizada
-DEPOSIT_AMOUNT=0.5 npx hardhat run scripts/deposit-funds.js --network sepolia
-```
-
-## 📁 Estructura del Proyecto
-
-```
-├── app/                    # Páginas Next.js 14 (App Router)
-│   ├── api/               # API Routes
-│   │   ├── reclamos/      # Endpoints de reclamos
-│   │   │   └── [id]/
-│   │   │       ├── aprobar/
-│   │   │       ├── rechazar/
-│   │   │       ├── validar/
-│   │   │       └── pagar/    # ← Endpoint de pagos
-│   │   └── estadisticas/  # Estadísticas del sistema
-│   ├── reclamos/          # Página de reclamos
-│   ├── pagos/             # ← Página de historial de pagos
-│   ├── estadisticas/      # Página de estadísticas
-│   └── admin/             # Panel administrativo
-├── components/            # Componentes React
-│   ├── admin-panel.tsx    # Panel de administración
-│   ├── payment-modal.tsx  # ← Modal de pagos
-│   └── ui/                # Componentes UI (shadcn)
-├── contracts/             # Smart Contracts (Solidity)
-│   └── ReclamacionesSeguros.sol
-├── lib/                   # Utilidades
-│   ├── contract.ts        # Configuración de ethers.js
-│   ├── reclamoService.ts  # Servicio MongoDB
-│   └── mongodb.ts         # Conexión MongoDB
-├── models/                # Modelos de datos
-│   └── reclamo.ts
-└── scripts/               # Scripts Hardhat
-    ├── deploy.js          # Desplegar contrato
-    ├── check-balance.js   # ← Verificar balance
-    └── deposit-funds.js   # ← Depositar fondos
-```
-
-## 🎯 Flujo de Trabajo
-
-```
-1. Usuario crea reclamo
-   ↓
-2. Transacción en blockchain (Ethereum)
-   ↓
-3. Registro en MongoDB
-   ↓
-4. Admin valida reclamo
-   ↓
-5. Admin aprueba/rechaza
-   ↓
-6. [Si aprobado] Admin procesa pago 💰
-   ↓
-7. Pago ejecutado en blockchain
-   ↓
-8. Estado actualizado a PAGADO ✅
-```
-
-## 🔧 Tecnologías Utilizadas
-
-### Frontend
-
--   **Next.js 14**: Framework React con App Router
--   **TypeScript**: Tipado estático
--   **Tailwind CSS**: Estilos utility-first
--   **shadcn/ui**: Componentes UI
--   **ethers.js**: Interacción con blockchain
-
-### Backend
-
--   **Next.js API Routes**: Endpoints serverless
--   **MongoDB**: Base de datos NoSQL
--   **Mongoose**: ODM para MongoDB
-
-### Blockchain
-
--   **Solidity**: Smart contracts
--   **Hardhat**: Framework de desarrollo
--   **Ethereum (Sepolia)**: Red de prueba
--   **MetaMask**: Wallet de usuario
-
-## 📊 Características del Sistema
-
-### Panel de Administración
-
--   Validar reclamos pendientes
--   Aprobar/rechazar reclamos
--   Procesar pagos (MetaMask o Contrato)
--   Ver estadísticas en tiempo real
-
-### Página de Pagos (`/pagos`)
-
--   Historial de pagos completados
--   Pagos pendientes
--   Balance del contrato
--   Enlaces a Etherscan
-
-### Estadísticas
-
--   Total de reclamos
--   Distribución por estado
--   Montos totales
--   Estadísticas blockchain
-
-## 🔐 Seguridad
-
--   ✅ Control de acceso (solo admins)
--   ✅ Validación de estados
--   ✅ Registro inmutable en blockchain
--   ✅ Historial de cambios en MongoDB
--   ✅ Verificación de balance antes de pagos
-
-## 🧪 Testing
-
-### Pruebas Locales
-
-```bash
-# Instalar Hardhat local
-npm install --save-dev hardhat
-
-# Correr tests
-npx hardhat test
-
-# Iniciar nodo local
-npx hardhat node
-
-# Desplegar en local
-npx hardhat run scripts/deploy.js --network localhost
-```
-
-### Obtener ETH de Prueba
-
--   [Sepolia Faucet](https://sepoliafaucet.com/)
--   [Alchemy Faucet](https://www.alchemy.com/faucets/ethereum-sepolia)
-
-## 📖 Documentación Adicional
-
--   [Sistema de Pagos](./SISTEMA_PAGOS.md) - Guía completa del sistema de pagos
--   [Smart Contract](./contracts/ReclamacionesSeguros.sol) - Código del contrato
--   [API Reference](./app/api/) - Documentación de endpoints
-
-## 🎓 Para la Tesis
-
-Este proyecto demuestra:
-
--   ✅ Integración blockchain con aplicación web moderna
--   ✅ Smart contracts para automatización de procesos
--   ✅ Arquitectura híbrida (blockchain + base de datos tradicional)
--   ✅ Implementación de pagos descentralizados
--   ✅ UI/UX moderna y responsive
--   ✅ Seguridad y auditoría de transacciones
-
-## 🤝 Contribuir
-
-Las contribuciones son bienvenidas. Por favor:
-
-1. Fork el proyecto
-2. Crea tu rama (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
-
-## 📝 Licencia
-
-Este proyecto es para fines educativos (Tesis).
-
-## 👨‍💻 Autor
-
-**Mabel - Tesis de Grado**
+Luego abrir:  
+👉 http://localhost:3000
 
 ---
 
-⭐ Si te gusta este proyecto, dale una estrella!
+# 💰 Sistema de Pagos Web3
 
-**Desarrollado con ❤️ usando Next.js, Ethereum y MongoDB**
+El sistema cuenta con **dos modos de pago**:
+
+---
+
+### 🔹 1. Pago con MetaMask (Descentralizado)
+
+- El administrador paga desde su propia wallet.  
+- Muestra transacción en MetaMask y luego en Etherscan.  
+- Ideal para demostración de la tesina.
+
+---
+
+### 🔹 2. Pago desde el Contrato (Automatizado)
+
+- Se depositan fondos en el contrato previamente.  
+- El contrato ejecuta el pago.  
+- Ideal para automatización total.
+
+---
+
+### 🔧 Comandos Útiles
+
+```bash
+# Consultar balance del contrato
+npx hardhat run scripts/check-balance.js --network sepolia
+
+# Depositar 0.1 ETH
+npx hardhat run scripts/deposit-funds.js --network sepolia
+
+# Depositar monto personalizado
+DEPOSIT_AMOUNT=0.5 npx hardhat run scripts/deposit-funds.js --network sepolia
+```
+
+---
+
+# 📁 Estructura del Proyecto
+
+```
+├── app/                     # Next.js (App Router)
+│   ├── api/                 # API Routes
+│   │   ├── reclamos/        # Endpoints de reclamos
+│   │   │   └── [id]/
+│   │   └── estadisticas/    # Dashboard
+│   ├── reclamos/            # Página de reclamos
+│   ├── pagos/               # Página de pagos
+│   └── admin/               # Panel administrativo
+│
+├── components/              # Componentes UI
+│   ├── admin-panel.tsx
+│   ├── payment-modal.tsx
+│   └── ui/
+│
+├── contracts/               # Smart Contracts (Solidity)
+│   └── ReclamacionesSeguros.sol
+│
+├── lib/                     # Lógica de negocio
+│   ├── contract.ts
+│   ├── reclamoService.ts
+│   └── mongodb.ts
+│
+├── models/                  # Modelos de MongoDB
+│   └── reclamo.ts
+│
+└── scripts/                 # Scripts Hardhat
+    ├── deploy.js
+    ├── check-balance.js
+    └── deposit-funds.js
+```
+
+---
+
+# 🎯 Flujo de Trabajo
+
+```
+1. Usuario crea reclamo
+2. Se registra en Blockchain (Ethereum)
+3. Se guarda en MongoDB
+4. Administrador valida el reclamo
+5. Aprueba o rechaza
+6. [Si aprobado] Ejecuta pago (MetaMask o contrato)
+7. Blockchain actualiza transacción
+8. Sistema cambia estado a PAGADO
+```
+
+---
+
+# 🔐 Seguridad
+
+-   Control de acceso para administradores.
+-   Validación estricta de estados.
+-   Registro inmutable en blockchain.
+-   Historial en MongoDB.
+-   Evita operaciones inválidas (doble pago, estados incorrectos, etc.).
+
+---
+
+# 🧪 Testing (Opcional)
+
+```bash
+# Instalar Hardhat
+npm install --save-dev hardhat
+
+# Ejecutar tests
+npx hardhat test
+
+# Nodo local Hardhat
+npx hardhat node
+
+# Desplegar en localhost
+npx hardhat run scripts/deploy.js --network localhost
+```
+
+---
+
+# 💡 Obtener ETH de Prueba
+
+- https://sepoliafaucet.com  
+- https://www.alchemy.com/faucets/ethereum-sepolia
+
+---
+
+# 🎓 Relevancia para la Tesina
+
+Este proyecto demuestra:
+
+-   ✔ Integración Web3 + Aplicación moderna  
+-   ✔ Automatización mediante contratos inteligentes  
+-   ✔ Uso real de Ethereum y MetaMask  
+-   ✔ Arquitectura híbrida (blockchain + base de datos)  
+-   ✔ Pagos descentralizados  
+-   ✔ Seguridad y trazabilidad  
+-   ✔ Interfaz profesional con Next.js  
+
+---
+
+# 👩‍💻 Autora
+
+**Sandra Anabel Ferrer**  
+Tesina – Universidad Champagnat  
+Mendoza, Argentina  
+
+---
+
+⭐ *Si este proyecto te resultó útil, podés dejar una estrella en GitHub.*
+
+**Desarrollado con ❤️ usando Next.js, Ethereum, Hardhat y MongoDB**
