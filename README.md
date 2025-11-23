@@ -134,7 +134,7 @@ A continuación se muestran las principales vistas del sistema desarrollado, inc
 
 ### 📌 Pantalla Principal
 
-![Pantalla Principal](capturas/pantalla-principal.png)
+![Pantalla Principal](public/capturas/pantalla-principal.png)
 
 
 ---
@@ -143,7 +143,7 @@ A continuación se muestran las principales vistas del sistema desarrollado, inc
 
 Vista del dashboard con métricas clave: total de reclamos, distribución por estado, montos aprobados, etc.
 
-![Estadísticas](capturas/estadisticas.png)
+![Estadísticas](public/capturas/estadisticas.png)
 
 ---
 
@@ -152,7 +152,7 @@ Vista del dashboard con métricas clave: total de reclamos, distribución por es
 Interfaz administrativa donde se validan, aprueban y rechazan reclamos.  
 Incluye acciones Web3 con MetaMask.
 
-![Gestión de Reclamos](capturas/gestion-reclamaciones.png)
+![Gestión de Reclamos](public/capturas/gestion-reclamaciones.png)
 
 ---
 
@@ -160,7 +160,7 @@ Incluye acciones Web3 con MetaMask.
 
 Panel para agregar o remover administradores autorizados.
 
-![Gestión de Usuarios](capturas/gestion-usuarios.png)
+![Gestión de Usuarios](public/capturas/gestion-usuarios.png)
 
 ---
 
@@ -168,7 +168,7 @@ Panel para agregar o remover administradores autorizados.
 
 Lista de transacciones, pagos completados y estado final del proceso.
 
-![Historial de Pagos](capturas/historial-pagos.png)
+![Historial de Pagos](public/capturas/historial-pagos.png)
 
 ---
 
