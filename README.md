@@ -126,6 +126,52 @@ DEPOSIT_AMOUNT=0.5 npx hardhat run scripts/deposit-funds.js --network sepolia
 ```
 
 ---
+---
+
+## 🖼️ Capturas del Sistema
+
+A continuación se muestran las principales vistas del sistema desarrollado, incluyendo administración de reclamos, gestión de usuarios, estadísticas, flujo de pagos y la pantalla principal.
+
+### 📌 Pantalla Principal
+
+![Pantalla Principal](capturas/pantalla-principal.png)
+
+
+---
+
+### 📊 Estadísticas del Sistema
+
+Vista del dashboard con métricas clave: total de reclamos, distribución por estado, montos aprobados, etc.
+
+![Estadísticas](capturas/estadisticas.png)
+
+---
+
+### 📝 Gestión de Reclamos
+
+Interfaz administrativa donde se validan, aprueban y rechazan reclamos.  
+Incluye acciones Web3 con MetaMask.
+
+![Gestión de Reclamos](capturas/gestion-reclamaciones.png)
+
+---
+
+### 👥 Gestión de Usuarios / Administradores
+
+Panel para agregar o remover administradores autorizados.
+
+![Gestión de Usuarios](capturas/gestion-usuarios.png)
+
+---
+
+### 💰 Historial de Pagos
+
+Lista de transacciones, pagos completados y estado final del proceso.
+
+![Historial de Pagos](capturas/historial-pagos.png)
+
+---
+
 
 # 📁 Estructura del Proyecto
 
