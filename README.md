@@ -251,6 +251,205 @@ npx hardhat run scripts/deploy.js --network localhost
 ```
 
 ---
+---
+
+# 📌 B) Contrato Inteligente Desplegado (Ethereum Sepolia)
+
+El sistema utiliza un contrato inteligente desplegado en la red **Sepolia Testnet**, encargado de gestionar estados, pagos y validaciones.
+
+### 🔗 Dirección del Contrato  
+`0x914582B7f5eDCC4eE3950db39519Cb29265b4CAD`
+
+### 🔎 Ver en Etherscan  
+https://sepolia.etherscan.io/address/0x914582B7f5eDCC4eE3950db39519Cb29265b4CAD
+
+---
+
+# 🏗️ D) Arquitectura General del Sistema
+
+```
+┌───────────────────────────────────────────────┐
+│                 Frontend (Next.js)             │
+│  - React + App Router                          │
+│  - TailwindCSS / shadcn/ui                     │
+│  - Conexión con MetaMask (ethers.js)           │
+└───────────────────────────────────────────────┘
+                    │
+                    ▼
+┌───────────────────────────────────────────────┐
+│            Backend (Next.js API Routes)        │
+│  - Endpoints de reclamos y pagos               │
+│  - Sincronización blockchain + MongoDB         │
+└───────────────────────────────────────────────┘
+                    │
+                    ▼
+┌───────────────────────────────────────────────┐
+│                    MongoDB                     │
+│   - Reclamos, notas, historial                 │
+└───────────────────────────────────────────────┘
+                    │
+                    ▼
+┌───────────────────────────────────────────────┐
+│      Ethereum Sepolia (Smart Contract)         │
+│   - Estados, validaciones y pagos              │
+│   - Roles de administrador                     │
+└───────────────────────────────────────────────┘
+```
+
+---
+
+# 🛠️ E) Instalación y Ejecución (Guía Completa)
+
+## 1) Clonar el repositorio
+```bash
+git clone https://github.com/SandraAnabelFerrer/ReclamoChain-Tesis.git
+cd ReclamoChain-Tesis
+```
+
+## 2) Instalar dependencias
+```bash
+npm install
+```
+
+## 3) Configurar archivo `.env.local`
+```env
+NEXT_PUBLIC_CONTRACT_ADDRESS=0x914582B7f5eDCC4eE3950db39519Cb29265b4CAD
+NEXT_PUBLIC_NETWORK=sepolia
+SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/TU_INFURA_KEY
+MONGODB_URI=mongodb+srv://usuario:password@cluster.mongodb.net/seguros
+```
+
+## 4) Iniciar el sistema
+```bash
+npm run dev
+```
+
+Abrir:  
+👉 http://localhost:3000
+
+## 5) Requisitos Web3
+- MetaMask instalada  
+- Red Sepolia  
+- ETH de prueba desde:  
+  - https://sepoliafaucet.com  
+  - https://www.alchemy.com/faucets/ethereum-sepolia  
+
+---
+
+# 📘 F) Documentación Técnica del Smart Contract
+
+Funciones principales:
+
+| Función | Descripción |
+|--------|-------------|
+| `registrarReclamo()` | Crear reclamo |
+| `validarReclamo()` | Estado → VALIDADO |
+| `aprobarReclamo()` | Estado → APROBADO |
+| `rechazarReclamo()` | Estado → RECHAZADO |
+| `procesarPago()` | Pago desde contrato |
+| `pagarReclamoPublico()` | Pago con MetaMask |
+| `obtenerReclamo()` | Datos completos |
+| `obtenerTotalReclamos()` | Total del sistema |
+
+Modificadores:
+- `soloPropietario`
+- `soloAdministrador`
+- `reclamoExiste`
+
+Eventos:
+- `ReclamoCreado`
+- `ReclamoValidado`
+- `ReclamoAprobado`
+- `ReclamoRechazado`
+- `ReclamoPagado`
+
+---
+
+# 🎯 G) Casos de Uso del Sistema
+
+### 1) Crear Reclamo
+- Usuario completa formulario  
+- Se guarda en MongoDB  
+- Estado inicial: **CREADO**
+
+### 2) Validar Reclamo
+- Admin firma en MetaMask  
+- Estado → **VALIDADO**
+
+### 3) Aprobar Reclamo
+- Admin agrega notas  
+- Firma transacción  
+- Estado → **APROBADO**
+
+### 4) Pagar Reclamo
+Métodos:
+- **MetaMask** (pago descentralizado)  
+- **Contrato** (pago automático)
+
+Estado final → **PAGADO**
+
+### 5) Estadísticas
+Consultas a MongoDB y sincronización con blockchain.
+
+---
+
+# 🖥️ H) Requisitos Técnicos
+
+### Software
+- Node.js 18+  
+- npm 9+  
+- MongoDB local o Atlas  
+- Google Chrome o Edge  
+- MetaMask
+
+### Librerías principales
+- Next.js 14  
+- React 18  
+- TailwindCSS  
+- shadcn/ui  
+- ethers.js  
+- Hardhat  
+- MongoDB Driver / Mongoose  
+
+### Red
+- RPC Sepolia  
+- ETH de prueba disponible  
+
+---
+
+# ❓ I) Preguntas Frecuentes (FAQ)
+
+## 1. ¿Necesito saber blockchain para probar el sistema?
+No. Con MetaMask y ETH de prueba es suficiente.
+
+## 2. ¿Debo desplegar el contrato nuevamente?
+No. Ya está desplegado en Sepolia.
+
+## 3. ¿Qué pasa si MetaMask no detecta la red?
+El sistema pedirá automáticamente cambiar a **Sepolia**.
+
+## 4. ¿Puedo usar MongoDB Atlas?
+Sí. Solo reemplazá `MONGODB_URI`.
+
+## 5. ¿Se puede pagar sin MetaMask?
+No. La firma es obligatoria.
+
+## 6. ¿Qué pasa si el reclamo ya está pagado?
+El contrato bloquea pagos repetidos.
+
+## 7. ¿Funciona en celular?
+No recomendado, MetaMask móvil no se conecta bien a `localhost`.
+
+## 8. ¿Puedo usarlo en red real (Mainnet)?
+Sí, solo modificando RPC y variables.
+
+## 9. ¿Dónde están las capturas?
+En `public/capturas/`.
+
+## 10. ¿Cuánta prueba necesita el profesor?
+Con 0.1 ETH de prueba alcanza para todas las transacciones.
+
+---
 
 # 💡 Obtener ETH de Prueba
 
